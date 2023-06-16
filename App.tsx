@@ -1,18 +1,9 @@
 import * as React from 'react';
-import {
-    MD3LightTheme as DefaultTheme,
-    Modal,
-    PaperProvider,
-    Portal,
-    Text,
-    useTheme,
-} from 'react-native-paper';
+import { MD3LightTheme as DefaultTheme, PaperProvider, Portal, useTheme } from 'react-native-paper';
 import { NavigationContainer } from '@react-navigation/native';
 import MainNavigation from './src/components/mainNavigation';
-
-import { useColorScheme } from 'react-native';
-import { createTask } from './src/api/tasks';
-import { NewTaskForm } from './src/components/newTaskForm';
+import { AppProvider } from './src/providers/AppContext';
+import { ModalWrapper } from './src/components/modalWrapper';
 
 const theme = {
     ...DefaultTheme,
@@ -38,56 +29,17 @@ export type AppTheme = typeof theme;
 export const useAppTheme = () => useTheme<AppTheme>();
 
 const App = () => {
-    const isDarkMode = useColorScheme() === 'dark';
-    const [visible, setVisible] = React.useState(false);
-    const [modalContent, setModalContent] = React.useState(<Text>Modal Content</Text>);
-    const showModal = () => setVisible(true);
-    const hideModal = () => setVisible(false);
-    const containerStyle = {
-        backgroundColor: isDarkMode ? theme.colors.darkTaskBg : theme.colors.lightTaskBg,
-        padding: 20,
-        margin: 20,
-    };
-
-    const handleFormSubmit = async (values: any) => {
-        try {
-            await createTask(values);
-            hideModal();
-            console.log('task created');
-        } catch (error) {
-            console.error(error);
-        }
-    };
-
-    const handleOpenModal =
-        ({ children }: { children: any }) =>
-        () => {
-            setModalContent(children);
-            showModal();
-        };
-
     return (
-        <PaperProvider theme={theme}>
-            <NavigationContainer>
-                <MainNavigation
-                    openNewTaskModal={handleOpenModal({
-                        children: (
-                            <NewTaskForm theme={theme} handleNewTaskSubmit={handleFormSubmit} />
-                        ),
-                    })}
-                />
-                <Portal>
-                    <Modal
-                        visible={visible}
-                        onDismiss={hideModal}
-                        contentContainerStyle={containerStyle}
-                        theme={theme}
-                    >
-                        {modalContent}
-                    </Modal>
-                </Portal>
-            </NavigationContainer>
-        </PaperProvider>
+        <AppProvider>
+            <PaperProvider theme={theme}>
+                <NavigationContainer>
+                    <MainNavigation />
+                    <Portal>
+                        <ModalWrapper theme={theme} />
+                    </Portal>
+                </NavigationContainer>
+            </PaperProvider>
+        </AppProvider>
     );
 };
 

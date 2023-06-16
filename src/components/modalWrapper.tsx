@@ -1,12 +1,11 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { useColorScheme } from 'react-native';
 import { Modal, Portal } from 'react-native-paper';
+import { AppContext } from '../providers/AppContext';
 
-export const ModalWrapper = ({ theme, children }: { theme: any; children: any }) => {
+export const ModalWrapper = ({ theme }: { theme: any }) => {
     const isDarkMode = useColorScheme() === 'dark';
-    const [visible, setVisible] = React.useState(false);
-    const showModal = () => setVisible(true);
-    const hideModal = () => setVisible(false);
+    const { modalVisible, closeModal, modalContent } = useContext(AppContext);
 
     const containerStyle = {
         backgroundColor: isDarkMode ? theme.colors.darkTaskBg : theme.colors.lightTaskBg,
@@ -16,12 +15,12 @@ export const ModalWrapper = ({ theme, children }: { theme: any; children: any })
     return (
         <Portal>
             <Modal
-                visible={visible}
-                onDismiss={hideModal}
+                visible={modalVisible}
+                onDismiss={closeModal}
                 contentContainerStyle={containerStyle}
                 theme={theme}
             >
-                {children}
+                {modalContent}
             </Modal>
         </Portal>
     );

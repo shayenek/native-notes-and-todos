@@ -5,6 +5,9 @@ import Main from '../screens/Main';
 
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAppTheme } from '../../App';
+import { useContext } from 'react';
+import { AppContext } from '../providers/AppContext';
+import { NewTaskForm } from './newTaskForm';
 
 function SettingsScreen() {
     return (
@@ -16,13 +19,15 @@ function SettingsScreen() {
 
 const Tab = createBottomTabNavigator();
 
-export const MainNavigation = ({
-    openNewTaskModal: openNewTaskModal,
-}: {
-    openNewTaskModal: () => void;
-}) => {
+export const MainNavigation = () => {
     const theme = useAppTheme();
     const isDarkMode = useColorScheme() === 'dark';
+
+    const { openModal } = useContext(AppContext);
+
+    const openTaskModal = () => {
+        openModal(<NewTaskForm theme={theme} />);
+    };
 
     return (
         <Tab.Navigator
@@ -35,7 +40,7 @@ export const MainNavigation = ({
                         ? theme.colors.darkTaskBg
                         : theme.colors.lightTaskBg,
                 },
-                tabBarActiveTintColor: 'tomato',
+                tabBarActiveTintColor: 'rgb(59,130,246)',
                 tabBarInactiveTintColor: 'gray',
                 tabBarLabelStyle: {
                     display: 'none',
@@ -69,7 +74,7 @@ export const MainNavigation = ({
             })}
         >
             <Tab.Screen
-                name="Home"
+                name="Tasks view"
                 component={Main}
                 options={{
                     tabBarIcon: homeIcon,
@@ -84,7 +89,7 @@ export const MainNavigation = ({
                 listeners={() => ({
                     tabPress: (e) => {
                         e.preventDefault();
-                        openNewTaskModal();
+                        openTaskModal();
                     },
                 })}
             />

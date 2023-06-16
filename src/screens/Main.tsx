@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import {
     RefreshControl,
     SafeAreaView,
@@ -17,6 +17,7 @@ import { useAppTheme } from '../../App';
 
 import { Pusher, PusherEvent } from '@pusher/pusher-websocket-react-native';
 import { getTasksData } from '../api/tasks';
+import { AppContext } from '../providers/AppContext';
 const Main = () => {
     const theme = useAppTheme();
     const isDarkMode = useColorScheme() === 'dark';
@@ -27,6 +28,8 @@ const Main = () => {
     const [isLoading, setLoading] = useState(true);
     const [tasksData, setTasksData] = useState<Task[]>([]);
     const [refreshing, setRefreshing] = useState(false);
+
+    const { filteredByHash } = useContext(AppContext);
 
     const onRefresh = React.useCallback(() => {
         setRefreshing(true);
@@ -75,6 +78,36 @@ const Main = () => {
         connectPusher();
     }, []);
 
+    const sortByHash = (data: Task[], hash: string) => {
+        const newData = data?.filter((task) => {
+            const words = task.title.split(' ');
+            const filteredWords = words.filter((word) => {
+                if (word.includes('#')) {
+                    const cleanedWord = word.replace('#', '').replace(' ', '').split('-')[0];
+                    const cleanedHash = hash.replace(' ', '').replace('#', '');
+                    if (cleanedWord === cleanedHash) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+            return filteredWords.length > 0;
+        });
+
+        return newData;
+    };
+
+    useEffect(() => {
+        if (filteredByHash) {
+            const filteredHashWithSymbol = `#${filteredByHash}`;
+            const filteredData = sortByHash(tasksData, filteredHashWithSymbol);
+            setTasksData(filteredData);
+        } else {
+            handleGetTaskData();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [filteredByHash]);
+
     return (
         <SafeAreaView style={backgroundStyle}>
             <StatusBar
@@ -86,7 +119,7 @@ const Main = () => {
                 style={backgroundStyle}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
             >
-                <View className="px-2 my-3">
+                <View className="px-2 my-3 min-h-screen" style={backgroundStyle}>
                     {isLoading ? (
                         <Text>Loading...</Text>
                     ) : (
