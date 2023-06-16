@@ -1,35 +1,78 @@
 import React, { useEffect, useState } from 'react';
-import { SafeAreaView, ScrollView, StatusBar, useColorScheme, View } from 'react-native';
-import { Button, Card, Text } from 'react-native-paper';
+import {
+    RefreshControl,
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    useColorScheme,
+    View,
+} from 'react-native';
+import { Text } from 'react-native-paper';
+import Config from 'react-native-config';
 
-import { Colors } from 'react-native/Libraries/NewAppScreen';
 import TaskItem from '../components/taskitem';
 
 import { Task } from '../../src/utils/types';
+import { useAppTheme } from '../../App';
 
+import { Pusher, PusherEvent } from '@pusher/pusher-websocket-react-native';
+import { getTasksData } from '../api/tasks';
 const Main = () => {
+    const theme = useAppTheme();
     const isDarkMode = useColorScheme() === 'dark';
     const backgroundStyle = {
-        backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+        backgroundColor: isDarkMode ? theme.colors.darkBg : theme.colors.lightBg,
     };
 
     const [isLoading, setLoading] = useState(true);
-    const [data, setData] = useState<Task[]>([]);
+    const [tasksData, setTasksData] = useState<Task[]>([]);
+    const [refreshing, setRefreshing] = useState(false);
 
-    const getMovies = async () => {
+    const onRefresh = React.useCallback(() => {
+        setRefreshing(true);
+        handleGetTaskData().then(() => setRefreshing(false));
+    }, []);
+
+    const handleGetTaskData = async () => {
         try {
-            const response = await fetch('http://192.168.31.35:3000/api/tasks/alltasks');
-            const json = await response.json();
-            setData(json);
+            const data = await getTasksData();
+            setTasksData(data);
+            setLoading(false);
         } catch (error) {
             console.error(error);
-        } finally {
-            setLoading(false);
         }
     };
 
     useEffect(() => {
-        getMovies();
+        handleGetTaskData();
+    }, []);
+
+    useEffect(() => {
+        const pusher = Pusher.getInstance();
+        const connectPusher = async () => {
+            try {
+                await pusher.init({
+                    apiKey: Config.PUSHER_API_KEY!,
+                    cluster: Config.PUSHER_CLUSTER!,
+                });
+
+                await pusher.connect();
+                await pusher.subscribe({
+                    channelName: 'user-shayenek',
+                    onEvent: (event: PusherEvent) => {
+                        console.log(`Event received: ${event}`);
+                        try {
+                            handleGetTaskData();
+                        } catch (error) {
+                            console.error(error);
+                        }
+                    },
+                });
+            } catch (error) {
+                console.error(error);
+            }
+        };
+        connectPusher();
     }, []);
 
     return (
@@ -38,23 +81,16 @@ const Main = () => {
                 barStyle={isDarkMode ? 'light-content' : 'dark-content'}
                 backgroundColor={backgroundStyle.backgroundColor}
             />
-            <ScrollView contentInsetAdjustmentBehavior="automatic" style={backgroundStyle}>
-                <Card className="mb-2">
-                    <Card.Content>
-                        <Text variant="titleLarge">Card title</Text>
-                        <Text variant="bodyMedium">Card content</Text>
-                    </Card.Content>
-                    <Card.Actions>
-                        <Button mode="contained" buttonColor="red">
-                            Delete
-                        </Button>
-                    </Card.Actions>
-                </Card>
-                <View>
+            <ScrollView
+                contentInsetAdjustmentBehavior="automatic"
+                style={backgroundStyle}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            >
+                <View className="px-2 my-3">
                     {isLoading ? (
                         <Text>Loading...</Text>
                     ) : (
-                        data.map((task) => <TaskItem key={task.id} {...task} />)
+                        tasksData.map((task) => <TaskItem key={task.id} {...task} />)
                     )}
                 </View>
             </ScrollView>
